@@ -26,11 +26,14 @@ def cli(image_repository, image_tag, node_datadir):
 @cli.command()
 @click.option("--endpoint", envvar="CSI_ENDPOINT", default="0.0.0.0:5000")
 @click.option("--nodeid", envvar="NODE_ID")
-@click.option("--enable-metrics/--disable-metrics", default=True)
-def csi_driver(endpoint, nodeid, enable_metrics):
+@click.option("--metrics-port", envvar="METRICS_PORT", default=9100)
+@click.option(
+    "--enable-metrics/--disable-metrics", envvar="ENABLE_METRICS", default=True
+)
+def csi_driver(endpoint, nodeid, enable_metrics, metrics_port):
     migrate_all_volume_schemas()
     if enable_metrics:
-        expose_metrics(nodeid)
+        expose_metrics(nodeid, metrics_port)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_IdentityServicer_to_server(
         bd2fs.Bd2FsIdentityServicer(rawfile_servicer.RawFileIdentityServicer()), server

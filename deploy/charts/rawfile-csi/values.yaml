@@ -112,11 +112,14 @@ node:
 # -- Sets image pull secret while pulling images from a private registry
 imagePullSecrets: []
 
-serviceMonitor:
-  # -- Enables prometheus service monitor
-  enabled: false
-  # -- Sets prometheus target interval
-  interval: 1m
+metrics:
+  enabled: true
+  port: 9100
+  serviceMonitor:
+    # -- Enables prometheus service monitor
+    enabled: false
+    # -- Sets prometheus target interval
+    interval: 1m
 
 storageClasses:
   - # -- Name of the StorageClass
