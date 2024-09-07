@@ -28,7 +28,11 @@ Kubernetes: `>= 1.21`
 | global.resources.requests.cpu | string | `"10m"` | Default CPU Request (Guaranty) for node and controller components |
 | global.resources.requests.memory | string | `"100Mi"` | Default Memory Request (Guaranty) for node and controller components |
 | imagePullSecrets | list | `[]` | Sets image pull secret while pulling images from a private registry |
-| node.dataDirPath | string | `"/var/lib/rawfile-localpv"` | Data dir path for provisioner to be used by provisioner |
+| metrics.enabled | bool | `true` | Completely enable or disable metrics |
+| metrics.port | int | `9100` | Sets metrics port |
+| metrics.serviceMonitor.enabled | bool | `false` | Enables prometheus service monitor |
+| metrics.serviceMonitor.interval | string | `"1m"` | Sets prometheus target interval |
+| node.dataDirPath | string | `"/var/csi/rawfile"` | Data dir path for provisioner to be used by provisioner |
 | node.driverRegistrar.image.repository | string | `"registry.k8s.io/sig-storage/csi-node-driver-registrar"` | Image Repository for `csi-node-driver-registrar` |
 | node.driverRegistrar.image.tag | string | `"v2.2.0"` | Image Tag for `csi-node-driver-registrar` |
 | node.externalProvisioner.image.repository | string | `"registry.k8s.io/sig-storage/csi-provisioner"` | Image Repository for `csi-provisioner` |
@@ -43,8 +47,6 @@ Kubernetes: `>= 1.21`
 | node.resources | object | `{}` | Overrides default resources for node component |
 | node.tolerations | list | `[{"operator":"Exist"}]` | Tolerations for node component |
 | provisionerName | string | `"rawfile.csi.openebs.io"` | Name of the registered CSI Driver in cluster |
-| serviceMonitor.enabled | bool | `false` | Enables prometheus service monitor |
-| serviceMonitor.interval | string | `"1m"` | Sets prometheus target interval |
 | storageClasses[0].allowVolumeExpansion | bool | `true` | volumes are able to expand/resize or not? |
 | storageClasses[0].enabled | bool | `true` | Enable or disable StorageClass |
 | storageClasses[0].name | string | `"rawfile-localpv"` | Name of the StorageClass |

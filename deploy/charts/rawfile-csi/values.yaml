@@ -113,7 +113,9 @@ node:
 imagePullSecrets: []
 
 metrics:
+  # -- Completely enable or disable metrics
   enabled: true
+  # -- Sets metrics port
   port: 9100
   serviceMonitor:
     # -- Enables prometheus service monitor

@@ -83,7 +83,7 @@ spec:
               value: {{ .Values.metrics.port | toString | quote }}
           ports:
             - name: metrics
-              containerPort: 9100
+              containerPort: {{ .Values.metrics.port }}
             - name: csi-probe
               containerPort: 9808
           volumeMounts:
