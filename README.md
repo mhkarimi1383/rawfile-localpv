@@ -1,7 +1,7 @@
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv?ref=badge_shield)
 
 ## RawFile-LocalPV
-The RawFile-LocalPV OpenEBS Data-Engine is a simialr but more flexible, yet more complex.. derication of the LocalPV-Hostpath Data-Engine. <BR>
+The RawFile-LocalPV OpenEBS Data-Engine is a similar but more flexible, yet more complex derivation of the LocalPV-Hostpath Data-Engine. <BR>
 
 This are a few reasons to consider using node-based (rather than network-based) storage architetcure:
 > - Performance: Almost no network-based storage solution can keep up with baremetal disk performance in terms of IOPS/latency/throughput combined. And you’d like to get the best out of the SSD you’ve got!
@@ -14,15 +14,15 @@ The OpenEBS LocalPV-HostPath Data-Engine makes it pretty easy to automatically p
 > [!IMPORTANT]
 > - You can’t monitor volume usage: There are hacky workarounds to run “du” regularly, but that could prove to be a performance killer, since it could put a lot of burden on your CPU and cause your filesystem cache to fill up. Not really good for a production workload.
 > - You can’t enforce hard limits on your volume’s size: Again, you can hack your way around it, with the same caveats.
-> - You are stuck with whatever filesystem your kubelet node is offering
-> - You can’t customize your filesystem:
+> - You are stuck with whatever filesystem your kubelet node is offering.
+> - You can’t customize your filesystem.
 
 <BR>
 ### All the above issues stem from the same root cause: 
    - hostPath/LocalPVs are simple bind-mounts from the host filesystem into the pod.
 
-### The idea behind RawFile-LocalPB 
-To use a Filesystem based 'extant file' as the emulated block device (i.e. a soft-LUN block device), and leverage the LINUX loop device to associate that soft-LUN file as a complete flexibe block device (i.e. an emulated soft disk device). At this point you can create a PV with a fileystem on it. This allows you to...
+### The idea behind RawFile-LocalPV 
+To use a Filesystem based 'extent file' as the emulated block device (i.e. a soft-LUN block device), and leverage the LINUX loop device to associate that soft-LUN file as a complete flexibe block device (i.e. an emulated soft disk device). At this point you can create a PV with a fileystem on it. This allows you to...
 > [!NOTE]
 > - You can monitor volume usage by running `df -hT` in `O(1)` since each soft-LUN block device is mounted separately on the local node (displaying utilization status/metrics or each mountpoint).
 > - The size limit is enforced by the operating system, based on the backing file system capacity and soft-lun device file size.
