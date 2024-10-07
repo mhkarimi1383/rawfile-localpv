@@ -1,6 +1,6 @@
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv?ref=badge_shield)
+<!--[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv?ref=badge_shield)-->
 
-## RawFile-LocalPV
+## RawFile-LocalPV [Experimental]
 The RawFile-LocalPV OpenEBS Data-Engine is a similar but more flexible, yet more complex derivation of the LocalPV-Hostpath Data-Engine. <BR>
 
 This are a few reasons to consider using node-based (rather than network-based) storage architetcure:
