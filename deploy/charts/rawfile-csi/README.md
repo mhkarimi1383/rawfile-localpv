@@ -1,6 +1,6 @@
 # rawfile-csi
 
-![Version: 0.8.0](https://img.shields.io/badge/Version-0.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.8.0](https://img.shields.io/badge/AppVersion-0.8.0-informational?style=flat-square)
+![Version: 0.9.0](https://img.shields.io/badge/Version-0.9.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.8.0](https://img.shields.io/badge/AppVersion-0.8.0-informational?style=flat-square)
 
 RawFile Driver Container Storage Interface
 
@@ -18,9 +18,12 @@ Kubernetes: `>= 1.21`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| controller.externalResizer.image.registry | string | `"registry.k8s.io"` | Image registry for `csi-resizer` |
+| controller.externalResizer.image.registry | string | `""` | Image registry for `csi-resizer` |
 | controller.externalResizer.image.repository | string | `"sig-storage/csi-resizer"` | Image Repository for `csi-resizer` |
 | controller.externalResizer.image.tag | string | `"v1.2.0"` | Image tag for `csi-resizer` |
+| controller.image.pullPolicy | string | `""` | Overrides default image pull policy for node component |
+| controller.image.repository | string | `""` | Overrides default image repository for node component |
+| controller.image.tag | string | `""` | Overrides default image tag for node component |
 | controller.priorityClassName | string | `"system-cluster-critical"` | priorityClassName for controller component since this part is critical for cluster `system-cluster-critical` is default |
 | controller.resources | object | `{}` | Sets compute resources for controller component |
 | controller.tolerations | list | `[{"effect":"NoSchedule","key":"node-role.kubernetes.io/master","operator":"Equal","value":"true"}]` | Tolerations for controller component |
@@ -53,7 +56,7 @@ Kubernetes: `>= 1.21`
 | node.metrics.enabled | bool | `false` |  |
 | node.priorityClassName | string | `"system-node-critical"` | priorityClassName for node component since this part is critical for node `system-node-critical` is default |
 | node.resources | object | `{}` | Sets compute resources for node component |
-| node.tolerations | list | `[{"operator":"Exist"}]` | Tolerations for node component |
+| node.tolerations | list | `[{"operator":"Exists"}]` | Tolerations for node component |
 | provisionerName | string | `"rawfile.csi.openebs.io"` | Name of the registered CSI Driver in the cluster |
 | storageClasses[0].allowVolumeExpansion | bool | `true` | volumes are able to expand/resize or not? |
 | storageClasses[0].enabled | bool | `true` | Enable or disable StorageClass |
