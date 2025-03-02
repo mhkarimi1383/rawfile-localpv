@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 
 helm upgrade --wait \
   -n kube-system -i rawfile-csi \
-  --set serviceMonitor.enabled=false \
+  --set metrics.serviceMonitor.enabled=false \
   --set controller.image.repository=$CI_IMAGE_REPO --set controller.image.tag=$CI_TAG \
   --set node.image.repository=$CI_IMAGE_REPO --set node.image.tag=$CI_TAG \
   ./deploy/charts/rawfile-csi/
