@@ -75,8 +75,8 @@ Some helpers to handle image global information
 {{- end }}
 
 {{- define "rawfile-csi.controller-image" -}}
-{{- $imageTag := .Values.controller.image.tag | default (.Values.global.image.tag | default .Chart.AppVersion) }}
-{{- $imageRegistry := .Values.image.registry | default(.Values.global.imageRegistry) }}
+{{- $imageTag := .Values.controller.image.tag | default (.Values.image.tag | default .Chart.AppVersion) }}
+{{- $imageRegistry := .Values.image.registry | default .Values.global.imageRegistry }}
 {{- printf "%s/%s:%s" $imageRegistry (include "rawfile-csi.controller-image-repository" .) (include "rawfile-csi.controller-image-tag" .) }}
 {{- end }}
 
@@ -99,8 +99,8 @@ Some helpers to handle image global information
 {{- end }}
 
 {{- define "rawfile-csi.node-image" -}}
-{{- $imageTag := .Values.node.image.tag | default (.Values.global.image.tag | default .Chart.AppVersion) }}
-{{- $imageRegistry := .Values.image.registry | default(.Values.global.imageRegistry) }}
+{{- $imageTag := .Values.node.image.tag | default (.Values.image.tag | default .Chart.AppVersion) }}
+{{- $imageRegistry := .Values.image.registry | default .Values.global.imageRegistry }}
 {{- printf "%s/%s:%s" $imageRegistry (include "rawfile-csi.node-image-repository" .) (include "rawfile-csi.node-image-tag" .) }}
 {{- end }}
 
