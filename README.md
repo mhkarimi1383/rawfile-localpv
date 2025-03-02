@@ -31,27 +31,19 @@ To use a Filesystem based 'extent file' as the emulated block device (i.e. a sof
 
 ### Prerequisites
 ---
+
 - Kubernetes: 1.21+
 
 ## Installation
 
 `helm install -n kube-system rawfile-csi ./deploy/charts/rawfile-csi/`
 
+> Refer to chart's [README](./deploy/charts/rawfile-csi/README.md) to see the [values](./deploy/charts/rawfile-csi/values.yaml) documentation if you need to customize it
+
 Usage
 ---
 
-Create a `StorageClass` with your desired options:
-
-```
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: my-sc
-provisioner: rawfile.csi.openebs.io
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-allowVolumeExpansion: true
-```
+You can create one or more storage classes using chart, by default we have a storage class named `rawfile-localpv`, but you can change the name or other options by changing chart values
 
 Features
 ---
@@ -60,12 +52,12 @@ Features
 - [x] Dynamic provisioning
 - [x] Enforced volume size limit
 - [x] Access Modes
-    - [x] ReadWriteOnce
-    - ~~ReadOnlyMany~~
-    - ~~ReadWriteMany~~
+  - [x] ReadWriteOnce
+  - ~~ReadOnlyMany~~
+  - ~~ReadWriteMany~~
 - [ ] Volume modes
-    - [x] `Filesystem` mode
-    - [ ] `Block` mode
+  - [x] `Filesystem` mode
+  - [ ] `Block` mode
 - [x] Volume metrics
 - [x] Supports fsTypes: `ext4`, `btrfs`, `xfs`
 - [x] Online expansion: If fs supports it (e.g. ext4, btrfs, xfs)
@@ -74,6 +66,7 @@ Features
 - [ ] Ephemeral inline volume
 - [x] Filesystem-level snapshots: `btrfs` supported
 
-
 ## License
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopenebs%2Frawfile-localpv?ref=badge_large)
+
