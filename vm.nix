@@ -1,4 +1,8 @@
-{ pkgs, ... }:
+{ ... }:
+let
+  sources = import ./nix/sources.nix;
+  pkgs = import sources.nixpkgs { };
+in
 {
   nix.nixPath = [
     "nixpkgs=${pkgs.path}"
