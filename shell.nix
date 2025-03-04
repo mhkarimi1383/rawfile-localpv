@@ -8,6 +8,7 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     kubectl
     kubernetes-helm-wrapped
+    helm-docs
     nixos-shell
     kind
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];

@@ -113,7 +113,6 @@ node:
 
   # -- Tolerations for node component
   tolerations:
-    - operator: "Exists"
 
 # -- Sets image pull secret while pulling images from a private registry
 imagePullSecrets: []

@@ -121,6 +121,7 @@ spec:
             - "--immediate-topology=false"
             - "--timeout=120s"
             - "--enable-capacity=true"
+            - "--capacity-for-immediate-binding=true"
             - "--capacity-ownerref-level=1" # DaemonSet
             - "--node-deployment=true"
           env:
