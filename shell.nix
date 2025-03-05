@@ -20,6 +20,11 @@ pkgs.mkShell {
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
   shellHook = ''
     export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib"
+    poetry install
+    source $(poetry env info -p)/bin/activate
+  '';
+  postShellHook = ''
+    deactivate
   '';
 }
 

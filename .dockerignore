@@ -3,4 +3,3 @@
 !pyproject.toml
 !docker-entrypoint.sh
 !poetry.lock
-!/tmp
