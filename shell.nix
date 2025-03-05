@@ -11,15 +11,15 @@ pkgs.mkShell {
     helm-docs
     nixos-shell
     kind
-    poetry
-    python311Full
+    python311
+    (poetry.override { python3 = python311; })
     gcc
     gnumake
     btrfs-progs
+    stdenv.cc.cc.lib
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
   shellHook = ''
-    poetry install
-    poetry shell
+    export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib"
   '';
 }
 

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rawfile-localpv"
+name = "rawfile"
 version = "0.8.0"
 description = "Dynamically deploy Stateful Persistent Node-Local Volumes & Filesystems for Kubernetes that is provisioned from RAW-device file loop mounted Local-Hostpath storage."
 authors = ["OpenEBS <openebs-team@googlegroups.com>"]
@@ -17,6 +17,8 @@ munch = "^4.0.0"
 prometheus-client = "^0.21.1"
 btrfsutil = "^6.13"
 
+[tool.poetry.scripts]
+rawfile = "rawfile.rawfile.cli"
 
 [build-system]
 requires = ["poetry-core"]
