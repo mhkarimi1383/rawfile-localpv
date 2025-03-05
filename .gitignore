@@ -108,3 +108,10 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python
+
+/*.qcow2
+
+.ci/e2e-test/e2e.test
+.ci/e2e-test/ginkgo
+.ci/e2e-test/ssh_id
+
