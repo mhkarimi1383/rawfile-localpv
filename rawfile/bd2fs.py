@@ -78,8 +78,7 @@ class Bd2FsNodeServicer(csi_pb2_grpc.NodeServicer):
     def NodeStageVolume(self, request, context):
         bd_stage_request = NodeStageVolumeRequest()
         bd_stage_request.CopyFrom(request)
-        bd_stage_request.staging_target_path = f"{
-            request.staging_target_path}/block"
+        bd_stage_request.staging_target_path = f"{request.staging_target_path}/block"
         Path(bd_stage_request.staging_target_path).mkdir(
             exist_ok=True,
             parents=True
@@ -90,8 +89,7 @@ class Bd2FsNodeServicer(csi_pb2_grpc.NodeServicer):
         bd_publish_request.volume_id = request.volume_id
         bd_publish_request.publish_context.update(request.publish_context)
         bd_publish_request.staging_target_path = bd_stage_request.staging_target_path
-        bd_publish_request.target_path = f"{
-            request.staging_target_path}/device"
+        bd_publish_request.target_path = f"{request.staging_target_path}/device"
         bd_publish_request.volume_capability.CopyFrom(
             request.volume_capability
         )
@@ -116,14 +114,12 @@ class Bd2FsNodeServicer(csi_pb2_grpc.NodeServicer):
 
         bd_unpublish_request = NodeUnpublishVolumeRequest()
         bd_unpublish_request.volume_id = request.volume_id
-        bd_unpublish_request.target_path = f"{
-            request.staging_target_path}/device"
+        bd_unpublish_request.target_path = f"{request.staging_target_path}/device"
         self.bds.NodeUnpublishVolume(bd_unpublish_request, context)
 
         bd_unstage_request = NodeUnstageVolumeRequest()
         bd_unstage_request.CopyFrom(request)
-        bd_unstage_request.staging_target_path = f"{
-            request.staging_target_path}/block"
+        bd_unstage_request.staging_target_path = f"{request.staging_target_path}/block"
         self.bds.NodeUnstageVolume(bd_unstage_request, context)
         be_absent(bd_unstage_request.staging_target_path)
 
@@ -203,8 +199,7 @@ class Bd2FsControllerServicer(csi_pb2_grpc.ControllerServicer):
         ]:
             context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT,
-                f"Unsupported access mode: {AccessModeEnum.Name(
-                    volume_capability.access_mode.mode)}",
+                f"Unsupported access mode: {AccessModeEnum.Name(volume_capability.access_mode.mode)}",
             )
 
         access_type = volume_capability.WhichOneof("access_type")
