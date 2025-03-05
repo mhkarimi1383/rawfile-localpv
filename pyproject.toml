@@ -18,7 +18,7 @@ prometheus-client = "^0.21.1"
 btrfsutil = "^6.13"
 
 [tool.poetry.scripts]
-rawfile = "rawfile.rawfile.cli"
+rawfile = "rawfile.rawfile:cli"
 
 [build-system]
 requires = ["poetry-core"]
