@@ -15,6 +15,7 @@ pkgs.mkShell {
     python311Full
     gcc
     gnumake
+    btrfs-progs
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
 }
 
