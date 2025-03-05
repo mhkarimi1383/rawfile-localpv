@@ -11,6 +11,8 @@ pkgs.mkShell {
     helm-docs
     nixos-shell
     kind
+    poetry
+    python311Full
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
 }
 
