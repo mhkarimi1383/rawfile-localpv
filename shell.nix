@@ -17,5 +17,9 @@ pkgs.mkShell {
     gnumake
     btrfs-progs
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
+  shellHook = ''
+    poetry install
+    poetry shell
+  '';
 }
 
