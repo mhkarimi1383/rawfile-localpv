@@ -13,6 +13,8 @@ pkgs.mkShell {
     kind
     poetry
     python311Full
+    gcc
+    gnumake
   ] ++ pkgs.lib.optional (builtins.getEnv "IN_NIX_SHELL" == "pure") [ docker-client ];
 }
 

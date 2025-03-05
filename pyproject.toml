@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "rawfile-localpv"
+version = "0.8.0"
+description = "Dynamically deploy Stateful Persistent Node-Local Volumes & Filesystems for Kubernetes that is provisioned from RAW-device file loop mounted Local-Hostpath storage."
+authors = ["OpenEBS <openebs-team@googlegroups.com>"]
+license = "apache"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+grpcio-tools = "^1.70.0"
+grpcio = "^1.70.0"
+click = "^8.1.8"
+pyyaml = "^6.0.2"
+pykube-ng = "^23.6.0"
+munch = "^4.0.0"
+prometheus-client = "^0.21.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
