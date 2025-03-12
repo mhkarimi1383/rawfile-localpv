@@ -51,6 +51,6 @@ ARG IMAGE_REPOSITORY
 ENV IMAGE_REPOSITORY=${IMAGE_REPOSITORY}
 ENV IMAGE_TAG=${IMAGE_TAG}
 
-ENTRYPOINT /docker-entrypoint.sh $0 $@
+ENTRYPOINT ["/docker-entrypoint.sh", "$0", "$@"]
 
 CMD ["csi-driver"]
