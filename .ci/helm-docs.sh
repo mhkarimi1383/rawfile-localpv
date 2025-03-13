@@ -3,7 +3,7 @@
 SCRIPTDIR=$(dirname "$0")
 ROOTDIR="$(realpath $SCRIPTDIR/..)"
 CHART_DIR="$ROOTDIR/deploy/helm/rawfile-csi"
-CRDS_CHART_DIR="$CHART_DIR/helm/crds"
+CRDS_CHART_DIR="$CHART_DIR/crds"
 README="README.md"
 SKIP_GIT=${SKIP_GIT:-}
 
