@@ -36,9 +36,9 @@ To use a Filesystem based 'extent file' as the emulated block device (i.e. a sof
 
 ## Installation
 
-`helm install -n kube-system rawfile-csi ./deploy/charts/rawfile-csi/`
+`helm install -n kube-system rawfile-csi ./deploy/helm/rawfile-csi/`
 
-> Refer to chart's [README](./deploy/charts/rawfile-csi/README.md) to see the [values](./deploy/charts/rawfile-csi/values.yaml) documentation if you need to customize it
+> Refer to chart's [README](./deploy/helm/rawfile-csi/README.md) to see the [values](./deploy/helm/rawfile-csi/values.yaml) documentation if you need to customize it
 
 Usage
 ---
