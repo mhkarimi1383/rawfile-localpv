@@ -1,31 +1,56 @@
-FROM python:3.11-slim-bookworm AS builder
-RUN apt-get update && apt-get install -y build-essential libbtrfsutil-dev
-RUN pip wheel -w /wheels "https://github.com/kdave/btrfs-progs/archive/refs/tags/v6.3.2.tar.gz#egg=btrfsutil&subdirectory=libbtrfsutil/python"
+FROM python:3.11-slim-bookworm AS base
 
-FROM python:3.11-slim-bookworm
-
-WORKDIR /app/
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y e2fsprogs btrfs-progs libbtrfsutil1 xfsprogs && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+        btrfs-progs \
+        libbtrfsutil-dev \
+        e2fsprogs \
+        btrfs-progs \
+        xfsprogs
 
-COPY --from=builder /wheels/ /wheels/
-RUN pip install /wheels/* && rm -rf /wheels
+FROM base AS python-base
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv"
 
-ENV PIP_NO_CACHE_DIR=1
-ADD ./requirements.txt ./
-RUN pip install -r ./requirements.txt
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
-ADD ./ ./
+FROM python-base AS builder-base
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        curl \
+        build-essential
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+WORKDIR $PYSETUP_PATH
+COPY ./poetry.lock ./pyproject.toml ./
+RUN poetry install --only main --no-root
+
+FROM python-base AS production
+
+COPY --from=builder-base $VENV_PATH $VENV_PATH
+
+COPY ./rawfile /rawfile
+WORKDIR /rawfile
+
 RUN python -m grpc_tools.protoc --proto_path=protos/ protos/csi.proto --grpc_python_out=csi/ --python_out=csi/
-
-ENTRYPOINT ["/usr/bin/env", "python3", "/app/rawfile.py"]
-CMD ["csi-driver"]
-ENV PYTHONUNBUFFERED=1
-
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 ARG IMAGE_TAG
 ARG IMAGE_REPOSITORY
 ENV IMAGE_REPOSITORY=${IMAGE_REPOSITORY}
 ENV IMAGE_TAG=${IMAGE_TAG}
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+CMD ["csi-driver"]

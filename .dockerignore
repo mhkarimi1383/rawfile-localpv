@@ -1,6 +1,5 @@
-.git/
-.github/
-Dockerfile
-deploy/
-*.qcow2
-*.nix
+*
+!rawfile/
+!pyproject.toml
+!docker-entrypoint.sh
+!poetry.lock
