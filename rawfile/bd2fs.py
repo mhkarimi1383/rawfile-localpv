@@ -79,7 +79,10 @@ class Bd2FsNodeServicer(csi_pb2_grpc.NodeServicer):
         bd_stage_request = NodeStageVolumeRequest()
         bd_stage_request.CopyFrom(request)
         bd_stage_request.staging_target_path = f"{request.staging_target_path}/block"
-        Path(bd_stage_request.staging_target_path).mkdir(exist_ok=True, parents=True)
+        Path(bd_stage_request.staging_target_path).mkdir(
+            exist_ok=True,
+            parents=True
+        )
         self.bds.NodeStageVolume(bd_stage_request, context)
 
         bd_publish_request = NodePublishVolumeRequest()
@@ -87,7 +90,9 @@ class Bd2FsNodeServicer(csi_pb2_grpc.NodeServicer):
         bd_publish_request.publish_context.update(request.publish_context)
         bd_publish_request.staging_target_path = bd_stage_request.staging_target_path
         bd_publish_request.target_path = f"{request.staging_target_path}/device"
-        bd_publish_request.volume_capability.CopyFrom(request.volume_capability)
+        bd_publish_request.volume_capability.CopyFrom(
+            request.volume_capability
+        )
         bd_publish_request.readonly = False
         bd_publish_request.secrets.update(request.secrets)
         bd_publish_request.volume_context.update(request.volume_context)
