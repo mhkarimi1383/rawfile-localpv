@@ -11,6 +11,7 @@ pkgs.mkShell {
     helm-docs
     nixos-shell
     kind
+    git
     python311
     (poetry.override { python3 = python311; })
     gcc

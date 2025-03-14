@@ -20,3 +20,36 @@ jobs:
         run: nix-shell --run ".ci/helm-docs.sh"
       - name: HelmChart Lint
         run: nix-shell --run ".ci/helm-lint.sh"
+
+  publish:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: ["chart-test"]
+    if: ${{ github.event_name != 'pull_request' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+          fetch-depth: 0
+    - uses: DeterminateSystems/nix-installer-action@v14
+    - uses: DeterminateSystems/magic-nix-cache-action@v8
+    - name: Pre-populate nix-shell
+      run: |
+        export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+        echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+        nix-shell --run "echo"
+
+    - name: Configure Git
+      run: |
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Run chart-releaser
+      uses: helm/chart-releaser-action@v1.7.0
+      with:
+        mark_as_latest: false
+        charts_dir: ./deploy/helm
+      env:
+        CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        CR_RELEASE_NAME_TEMPLATE: 'chart-{{ .Version }}'
