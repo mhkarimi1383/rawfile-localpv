@@ -66,6 +66,7 @@ Kubernetes: `>= 1.21`
 | provisionerName | string | `"rawfile.csi.openebs.io"` | Name of the registered CSI Driver in the cluster |
 | storageClasses[0].allowVolumeExpansion | bool | `true` | volumes are able to expand/resize or not? |
 | storageClasses[0].enabled | bool | `true` | Enable or disable StorageClass |
+| storageClasses[0].fsType | string | `"ext4"` | Sets filesystem type for volumes (Currently supports `btrfs`, `xfs` and `ext4` [which is default]) |
 | storageClasses[0].name | string | `"rawfile-localpv"` | Name of the StorageClass |
 | storageClasses[0].reclaimPolicy | string | `"Delete"` | Sets default reclaimPolicy for StorageClass volumes |
 | storageClasses[0].volumeBindingMode | string | `"WaitForFirstConsumer"` | Sets volumeBindingMode for StorageClass |
