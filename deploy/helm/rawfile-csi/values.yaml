@@ -139,6 +139,8 @@ storageClasses:
     allowVolumeExpansion: true
     # -- Sets default reclaimPolicy for StorageClass volumes
     reclaimPolicy: Delete
+    # -- Sets filesystem type for volumes (Currently supports `btrfs`, `xfs` and `ext4` [which is default])
+    fsType: ext4
 
 crds:
   # -- Disables the installation of all CRDs if set to false

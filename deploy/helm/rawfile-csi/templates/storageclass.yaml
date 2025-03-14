@@ -9,6 +9,8 @@ provisioner: {{ $vals.provisionerName }}
 reclaimPolicy: {{ $class.reclaimPolicy }}
 volumeBindingMode: {{ $class.volumeBindingMode }}
 allowVolumeExpansion: {{ $class.allowVolumeExpansion }}
+parameters:
+  csi.storage.k8s.io/fstype: {{ $class.fsType | default "ext4" }}
 ---
 {{- end }}
 {{- end }}
