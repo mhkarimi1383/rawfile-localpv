@@ -15,6 +15,7 @@ export CI_REGISTRY="docker.io"
 export CI_TAG="${COMMIT}-ci"
 export CI_IMAGE_REPO="${IMAGE}"
 export CI_IMAGE_URI="${CI_REGISTRY}/${CI_IMAGE_REPO}:${CI_TAG}"
+export CI_IMAGE_PLATFORMS=linux/amd64,linux/arm64
 
 command -v docker &>/dev/null || ( echo 'docker not found. exiting...'; exit 1 )
 
