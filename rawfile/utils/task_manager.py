@@ -4,6 +4,7 @@ from typing import Callable, TypedDict
 import time
 import consts
 from utils.snapshot_manager import manager as snapshot_manager
+from utils.volume_manager import manager as volume_manager
 from pathlib import Path
 import json
 import hashlib
@@ -19,6 +20,7 @@ class TaskManagerShuttingDown(Exception):
 
 class TaskName(StrEnum):
     CREATE_SNAPSHOT = "CreateSnapshot"
+    CREATE_VOLUME = "CreateVolume"
 
 
 class TaskState(StrEnum):
@@ -30,6 +32,7 @@ class TaskState(StrEnum):
 
 task_mapping: dict[TaskName, Callable] = {
     TaskName.CREATE_SNAPSHOT: snapshot_manager.create_snapshot,
+    TaskName.CREATE_VOLUME: volume_manager.create_volume,
 }
 
 
