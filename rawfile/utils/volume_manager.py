@@ -52,6 +52,7 @@ class VolumeManager:
         freezefs: bool = False,
         copy_on_write: bool | None = None,
         snapshot_id: str | None = None,
+        temporary_snapshot: bool = False,
     ) -> Volume:
         """Create a new volume with the specified parameters.
 
@@ -67,6 +68,7 @@ class VolumeManager:
             freezefs: Whether filesystem freeze was requested (stored in metadata)
             copy_on_write: Whether copy-on-write was requested (stored in metadata)
             snapshot_id: Optional snapshot ID to restore from (format: "volume_id/snapshot_name")
+            temporary_snapshot: Whether to restore from temporary snapshot directory
 
         Returns:
             Volume: Volume dataclass with volume info and ready=True
@@ -101,9 +103,10 @@ class VolumeManager:
                         thin_provision=thin_provision,
                     )
 
-                # Create snapshots directory
+                # Create snapshots directory and temp subdirectory
                 snapshots_directory = Path(volume_img_dir.joinpath("snapshots"))
                 snapshots_directory.mkdir(exist_ok=True)
+                Path(snapshots_directory.joinpath("temp")).mkdir(exist_ok=True)
 
                 # Create or update metadata
                 patch_metadata(
@@ -136,7 +139,9 @@ class VolumeManager:
                         source_volume=source_volume_id,
                         source_snapshot=snapshot_name,
                     )
-                    snapshot_manager.restore_snapshot(source_volume_id, snapshot_name, volume_img_file)
+                    snapshot_manager.restore_snapshot(
+                        source_volume_id, snapshot_name, volume_img_file, temporary_snapshot
+                    )
 
                 # Provision the disk space
                 if thin_provision:
