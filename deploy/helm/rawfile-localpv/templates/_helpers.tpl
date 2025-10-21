@@ -112,3 +112,7 @@ Some helpers to handle image global information
 {{- define "rawfile-localpv.node-resources" -}}
 {{- toYaml (.Values.node.resources) }}
 {{- end }}
+
+{{- define "rawfile-localpv.node-kubelet-path" -}}
+{{- printf "%s/" (.Values.node.kubeletPath | trimSuffix "/") -}}
+{{- end }}

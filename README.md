@@ -69,6 +69,9 @@ Please follow the instructions from the [Install Guide](./docs/install-guide.md)
 - [x] Online expansion: If fs supports it (e.g. ext4, btrfs, xfs)
 - [ ] Online shrinking: If fs supports it (e.g. btrfs)
 - [ ] Offline expansion/shrinking
+- [x] Volume Cloning
+  - [x] Same node cloning
+  - [ ] Cross node cloning (in progress)
 - [x] Volume Snapshots
   - ~~[x] Filesystem-level snapshots: `btrfs` supported~~
   - [x] Block Level snapshots

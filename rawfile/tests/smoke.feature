@@ -26,17 +26,44 @@ Feature: Basic Functionality
     | WaitForFirstConsumer | ReadWriteOnce | null    | Block       | null          |
 
   Scenario Outline: Snapshot creates and restores with different parameters and successfully remove it
-    When I create a Persistent Volume Claim with <copy_on_write> <fsfreeze> for snapshotting
+    When I create a Persistent Volume Claim with <copy_on_write> <fsfreeze> as source PVC
     Then we create a pod which mounts the PVC
     And we write some data to the mount path
-    And delete pod if snapshotting of inused volume is disabled
+    And delete pod if cloning of inused volume is disabled
     When we create a snapshot referencing the PVC
     Then the snapshot is eventually ready
     When we create a restore volume from the snapshot
     And we create a pod which mounts the restore PVC
     Then the restored volume should contain the snapshot data
+    When we delete the source writer pod
+    Then source writer pod should be eventually be deleted
+    When we delete the source PVC
+    Then source PVC should be eventually be deleted
     When we delete the snapshot
-    Then it should be eventually be deleted
+    Then snapshot should be eventually be deleted
+
+  Examples:
+    | copy_on_write | fsfreeze |
+    | false         | false    |
+    | true          | false    |
+    | false         | true     |
+
+  Scenario Outline: Create PVCs and use them as source for other PVCs
+    When I create a Persistent Volume Claim with <copy_on_write> <fsfreeze> as source PVC
+    Then we create a pod which mounts the PVC
+    And we write some data to the mount path
+    And delete pod if cloning of inused volume is disabled
+    When we create a PVC that uses source PVC
+    And we create a pod which mounts the cloned PVC
+    Then the newly created volume should contain the source data
+    When we delete the source writer pod
+    Then source writer pod should be eventually be deleted
+    When we delete the source PVC
+    Then source PVC should be eventually be deleted
+    When we delete the clone pod
+    Then clone pod should be eventually be deleted
+    When we delete the cloned PVC
+    Then cloned PVC should be eventually be deleted
 
   Examples:
     | copy_on_write | fsfreeze |

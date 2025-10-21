@@ -55,7 +55,9 @@ def img_file(volume_id):
     return Path(metadata(volume_id)["img_file"])
 
 
-def snapshots_dir(volume_id):
+def snapshots_dir(volume_id: str, temporary: bool = False):
+    if temporary:
+        return Path(f"{img_dir(volume_id)}/snapshots/temp")
     return Path(f"{img_dir(volume_id)}/snapshots")
 
 
@@ -64,30 +66,42 @@ def img_size(volume_id) -> int:
 
 
 def destroy(volume_id, dry_run=True):
+    def rmdir(path: Path):
+        try:
+            path.rmdir()
+        except FileNotFoundError:
+            pass
+
     logger.info("Destroying Volume", volume_id=volume_id, dry_run=dry_run)
     if dry_run:
         return
     snapshots = list(snapshots_dir(volume_id).glob("*"))
+    temp_snapshots = list(snapshots_dir(volume_id, temporary=True).glob("*"))
+    total_snapshots = len(snapshots) + len(temp_snapshots)
     meta = metadata_or(volume_id)
     if len(meta.get("reflink_attached", [])) > 0:
         logger.warning(
             "Volume has COW Snapshots attached, skipping destroy, will be destoyed when all snapshots are removed",
             volume_id=volume_id,
-            snapshots=len(snapshots),
+            snapshots=total_snapshots,
         )
         return
+    elif total_snapshots > 0:
+        logger.warning(
+            "Volume has Snapshots(without COW) attached, will only remove volume data",
+            volume_id=volume_id,
+            snapshots=total_snapshots,
+        )
     Path(img_file(volume_id)).unlink(missing_ok=True)
-    Path(meta_file(volume_id)).unlink(missing_ok=True)
     Path(lock_file(volume_id)).unlink(missing_ok=True)
-    if len(snapshots) < 1:
-        try:
-            snapshots_dir(volume_id).rmdir()
-        except FileNotFoundError:
-            pass
-        try:
-            Path(img_dir(volume_id)).rmdir()
-        except FileNotFoundError:
-            pass
+    if not len(temp_snapshots):
+        rmdir(snapshots_dir(volume_id, temporary=True))
+        if not len(snapshots):
+            rmdir(snapshots_dir(volume_id))
+    if not total_snapshots:
+        # Keep metadata if there are snapshots to be able to delete them later
+        Path(meta_file(volume_id)).unlink(missing_ok=True)
+        rmdir(Path(img_dir(volume_id)))
 
 
 def gc_if_needed(volume_id, dry_run=True):
@@ -196,6 +210,7 @@ def attach_loop(file) -> str:
 
     # if multiple pods are getting staged at the same time, and there's not enough loop nodes, then we
     # could clash on the creation, thus leading into losetup -f failures...
+    last_exception = None
     max_attempts = 20
     for _ in range(max_attempts):
         try:

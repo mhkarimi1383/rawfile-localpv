@@ -113,27 +113,29 @@ def log_grpc_request(func):
         is_json = format == LoggingFormats.JSON
         args = {
             "handler": func.__name__,
-            "request": MessageToDict(request) if is_json else request,
             "starttime": start,
         }
+        res = None
         try:
             res = func(self, request, context)
             end = datetime.now()
             args.update(
                 {
-                    "response": MessageToDict(res) if is_json else res,
                     "latency": end - start,
                     "endtime": end,
                     "success": True,
                 }
             )
-            logger.info("GRPC Server Access Log", **args)
+            logger.success("GRPC Server Access Log", **args)
             return res
         except Exception as exc:
             end = datetime.now()
             args.update(
                 {
-                    "response": None,
+                    "response": (MessageToDict(res) if is_json else res)
+                    if res
+                    else res,
+                    "request": MessageToDict(request) if is_json else request,
                     "latency": end - start,
                     "endtime": end,
                     "success": False,

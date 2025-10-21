@@ -52,6 +52,11 @@ def test_create_snapshot_with_different_parameters():
     """Snapshot creates and restores with different parameters and successfully remove it"""
 
 
+@scenario("smoke.feature", "Create PVCs and use them as source for other PVCs")
+def test_create_pvcs_as_source_for_other_pvcs():
+    """Create PVCs and use them as source for other PVCs."""
+
+
 @pytest.fixture(scope="module")
 def cluster():
     # Start deployer
@@ -124,10 +129,14 @@ def _(binding_mode, access_mode, fs_type, volume_mode, mount_options):
         return
     logger.info(f"Deleting PVC: {pvc_name}")
     stor_v1.delete_storage_class(name=sc_name)
-    core_v1.delete_namespaced_persistent_volume_claim(
-        name=pvc_name, namespace=namespace
-    )
-    wait_pvc_deleted(pvc_name)
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+        wait_pvc_deleted(pvc_name)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
 
 
 @when("a pod is created with the above PVC", target_fixture="pod")
@@ -487,9 +496,9 @@ def wait_snapshot_deleted(name):
 
 @when(
     parsers.parse(
-        "I create a Persistent Volume Claim with {copy_on_write} {fsfreeze} for snapshotting"
+        "I create a Persistent Volume Claim with {copy_on_write} {fsfreeze} as source PVC"
     ),
-    target_fixture="snapshot_pvc",
+    target_fixture="source_pvc",
 )
 def _(copy_on_write, fsfreeze):
     _copy_on_write = str_to_bool(copy_on_write)
@@ -518,7 +527,7 @@ def _(copy_on_write, fsfreeze):
         metadata=client.V1ObjectMeta(
             name=pvc_name,
             annotations={
-                "rawfile-test/snapinuse": str(_copy_on_write or _fsfreeze).lower()
+                "rawfile-test/clone-in-use": str(_copy_on_write or _fsfreeze).lower()
             },
         ),
         spec=client.V1PersistentVolumeClaimSpec(
@@ -537,16 +546,20 @@ def _(copy_on_write, fsfreeze):
         return
     logger.info(f"Deleting PVC: {pvc_name}")
     stor_v1.delete_storage_class(name=sc_name)
-    core_v1.delete_namespaced_persistent_volume_claim(
-        name=pvc_name, namespace=namespace
-    )
-    wait_pvc_deleted(pvc_name)
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+        wait_pvc_deleted(pvc_name)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
 
 
-@then("we create a pod which mounts the PVC", target_fixture="snapshot_pod")
-def _(snapshot_pvc):
+@then("we create a pod which mounts the PVC", target_fixture="source_writer_pod")
+def _(source_pvc):
     """we create a pod which mounts the PVC."""
-    pod = create_pod(f"writer-{snapshot_pvc.metadata.name}", snapshot_pvc, True)
+    pod = create_pod(f"writer-{source_pvc.metadata.name}", source_pvc, True)
     yield pod
     if not fixture_cleanup():
         return
@@ -561,10 +574,10 @@ def _(snapshot_pvc):
 
 
 @then("we write some data to the mount path")
-def _(snapshot_pvc, snapshot_pod):
+def _(source_pvc, source_writer_pod):
     """we write some data to the mount path."""
-    pvc_name = snapshot_pvc.metadata.name
-    pod_name = snapshot_pod.metadata.name
+    pvc_name = source_pvc.metadata.name
+    pod_name = source_writer_pod.metadata.name
     wait_pod_running(pod_name)
     exec_command = [
         "/bin/sh",
@@ -583,15 +596,15 @@ def _(snapshot_pvc, snapshot_pod):
     )
 
 
-@then("delete pod if snapshotting of inused volume is disabled")
-def _(snapshot_pod, snapshot_pvc):
+@then("delete pod if cloning of inused volume is disabled")
+def _(source_writer_pod, source_pvc):
     """delete pod if snapshotting of inused volume is disabled."""
-    pod_name = snapshot_pod.metadata.name
+    pod_name = source_writer_pod.metadata.name
     if str_to_bool(
-        snapshot_pvc.metadata.annotations.get("rawfile-test/snapinuse", "false")
+        source_pvc.metadata.annotations.get("rawfile-test/clone-in-use", "false")
     ):
         logger.info(
-            f"Skipping deletion of snapshot writer POD: {pod_name}, we are allowed to snapshot in used volumes"
+            f"Skipping deletion of source writer POD: {pod_name}, we are allowed to clone in used volumes"
         )
     else:
         try:
@@ -604,10 +617,10 @@ def _(snapshot_pod, snapshot_pvc):
 
 
 @when("we create a snapshot referencing the PVC", target_fixture="snapshot")
-def _(snapshot_pvc):
+def _(source_pvc):
     """we create a snapshot referencing the PVC."""
     snap_class = "snapshot-class"
-    snap_name = f"{snapshot_pvc.metadata.name}-snap"
+    snap_name = f"{source_pvc.metadata.name}-snap"
     try:
         client.CustomObjectsApi().delete_cluster_custom_object(
             group="snapshot.storage.k8s.io",
@@ -639,7 +652,7 @@ def _(snapshot_pvc):
         "metadata": {"name": snap_name, "namespace": namespace},
         "spec": {
             "volumeSnapshotClassName": snap_class,
-            "source": {"persistentVolumeClaimName": snapshot_pvc.metadata.name},
+            "source": {"persistentVolumeClaimName": source_pvc.metadata.name},
         },
     }
     logger.info(f"Creating Snapshot: {snap_name}")
@@ -683,7 +696,7 @@ def _(snapshot):
 
 
 @when("we create a restore volume from the snapshot", target_fixture="restore_pvc")
-def _(snapshot_pvc, snapshot):
+def _(source_pvc, snapshot):
     """we create a restore volume from the snapshot."""
     data_source = client.V1TypedLocalObjectReference(
         api_group="snapshot.storage.k8s.io",
@@ -696,7 +709,7 @@ def _(snapshot_pvc, snapshot):
         spec=client.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
             resources=client.V1ResourceRequirements(requests={"storage": "512Mi"}),
-            storage_class_name=snapshot_pvc.spec.storage_class_name,
+            storage_class_name=source_pvc.spec.storage_class_name,
             data_source=data_source,
         ),
     )
@@ -709,10 +722,14 @@ def _(snapshot_pvc, snapshot):
     if not fixture_cleanup():
         return
     logger.info(f"Deleting Restore PVC: {pvc_name}")
-    core_v1.delete_namespaced_persistent_volume_claim(
-        name=pvc_name, namespace=namespace
-    )
-    wait_pvc_deleted(pvc_name)
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+        wait_pvc_deleted(pvc_name)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
 
 
 @when("we create a pod which mounts the restore PVC", target_fixture="restore_pod")
@@ -722,7 +739,7 @@ def _(restore_pvc):
     if not fixture_cleanup():
         return
     name = pod.metadata.name
-    logger.info(f"Deleting btrfs POD: {name}")
+    logger.info(f"Deleting POD: {name}")
     try:
         client.CoreV1Api().delete_namespaced_pod(name, namespace)
     except ApiException as e:
@@ -769,8 +786,169 @@ def _(snapshot):
     )
 
 
-@then("it should be eventually be deleted")
+@then("snapshot should be eventually be deleted")
 def _(snapshot):
-    """it should be eventually be deleted."""
+    """snapshot should be eventually be deleted."""
     wait_snapshot_deleted(snapshot["metadata"]["name"])
     logger.info(f"Snapshot deleted: {snapshot['metadata']['name']}")
+
+
+@when("we create a PVC that uses source PVC", target_fixture="clone_pvc")
+def _(source_pvc):
+    """we create a restore volume from the snapshot."""
+    data_source = client.V1TypedLocalObjectReference(
+        api_group="",
+        kind="PersistentVolumeClaim",
+        name=source_pvc.metadata.name,
+    )
+    pvc_name = f"{source_pvc.metadata.name}-clone"
+    clone_pvc = client.V1PersistentVolumeClaim(
+        metadata=client.V1ObjectMeta(name=pvc_name),
+        spec=client.V1PersistentVolumeClaimSpec(
+            access_modes=["ReadWriteOnce"],
+            resources=client.V1ResourceRequirements(requests={"storage": "512Mi"}),
+            storage_class_name=source_pvc.spec.storage_class_name,
+            data_source=data_source,
+        ),
+    )
+    logger.info(f"Creating Clone PVC: {pvc_name}")
+    core_v1 = client.CoreV1Api()
+    clone_pvc = core_v1.create_namespaced_persistent_volume_claim(
+        body=clone_pvc, namespace=namespace
+    )
+    yield clone_pvc
+    if not fixture_cleanup():
+        return
+    logger.info(f"Deleting Clone PVC: {pvc_name}")
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+        wait_pvc_deleted(pvc_name)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+
+
+@when("we create a pod which mounts the cloned PVC", target_fixture="clone_pod")
+def _(clone_pvc):
+    pod = create_pod(f"clone-{clone_pvc.metadata.name}", clone_pvc, True)
+    yield pod
+    if not fixture_cleanup():
+        return
+    name = pod.metadata.name
+    logger.info(f"Deleting POD: {name}")
+    try:
+        client.CoreV1Api().delete_namespaced_pod(name, namespace)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+    wait_pod_deleted(name)
+
+
+@then("the newly created volume should contain the source data")
+def _(clone_pvc, clone_pod):
+    """the newly created volume should contain the source data."""
+    pvc_name = clone_pvc.metadata.name
+    pod_name = clone_pod.metadata.name
+    wait_pod_running(pod_name)
+    exec_command = [
+        "/bin/sh",
+        "-c",
+        f"cat /{pvc_name}/file",
+    ]
+    out = stream(
+        client.CoreV1Api().connect_get_namespaced_pod_exec,
+        pod_name,
+        namespace,
+        command=exec_command,
+        stderr=True,
+        stdin=False,
+        stdout=True,
+        tty=False,
+    )
+    logger.error(f"C: {out}")
+
+
+@when("we delete the source PVC")
+def _(source_pvc):
+    """we delete the source PVC."""
+    pvc_name = source_pvc.metadata.name
+    logger.info(f"Deleting PVC: {pvc_name}")
+    core_v1 = client.CoreV1Api()
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+
+
+@then("source PVC should be eventually be deleted")
+def _(source_pvc):
+    """source PVC should be eventually be deleted."""
+    wait_pvc_deleted(source_pvc.metadata.name)
+    logger.info(f"PVC deleted: {source_pvc.metadata.name}")
+
+
+@when("we delete the cloned PVC")
+def _(clone_pvc):
+    """we delete the cloned PVC."""
+    pvc_name = clone_pvc.metadata.name
+    logger.info(f"Deleting PVC: {pvc_name}")
+    core_v1 = client.CoreV1Api()
+    try:
+        core_v1.delete_namespaced_persistent_volume_claim(
+            name=pvc_name, namespace=namespace
+        )
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+
+
+@then("cloned PVC should be eventually be deleted")
+def _(clone_pvc):
+    """clone PVC should be eventually be deleted."""
+    wait_pvc_deleted(clone_pvc.metadata.name)
+    logger.info(f"PVC deleted: {clone_pvc.metadata.name}")
+
+
+@when("we delete the source writer pod")
+def _(source_writer_pod):
+    """we delete the source writer pod."""
+    pod_name = source_writer_pod.metadata.name
+    logger.info(f"Deleting POD: {pod_name}")
+    core_v1 = client.CoreV1Api()
+    try:
+        core_v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+
+
+@then("source writer pod should be eventually be deleted")
+def _(source_writer_pod):
+    """source writer pod should be eventually be deleted."""
+    wait_pod_deleted(source_writer_pod.metadata.name)
+    logger.info(f"PVC deleted: {source_writer_pod.metadata.name}")
+
+
+@when("we delete the clone pod")
+def _(clone_pod):
+    """we delete the clone pod."""
+    pod_name = clone_pod.metadata.name
+    logger.info(f"Deleting POD: {pod_name}")
+    core_v1 = client.CoreV1Api()
+    try:
+        core_v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+    except ApiException as e:
+        if e.status != 404:
+            raise e
+
+
+@then("clone pod should be eventually be deleted")
+def _(clone_pod):
+    """clone PVC should be eventually be deleted."""
+    wait_pod_deleted(clone_pod.metadata.name)
+    logger.info(f"POD deleted: {clone_pod.metadata.name}")

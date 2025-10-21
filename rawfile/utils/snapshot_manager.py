@@ -1,3 +1,4 @@
+from os import fsync
 from pathlib import Path
 import time
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ class Snapshot:
     creation_time: float
     snapshot_id: str
     ready: bool
+    temporary: bool
 
 
 @dataclass
@@ -34,8 +36,10 @@ class SnapshotList:
 
 
 class SnapshotManager:
-    def _get_snapshot_path(self, volume_id: str, name: str) -> Path:
-        return snapshots_dir(volume_id) / f"{name}.img"
+    def _get_snapshot_path(
+        self, volume_id: str, name: str, temporary: bool = False
+    ) -> Path:
+        return snapshots_dir(volume_id, temporary=temporary) / f"{name}.img"
 
     def create_snapshot(
         self,
@@ -43,11 +47,12 @@ class SnapshotManager:
         name: str,
         copy_on_write: bool,
         freeze_fs: bool = False,
+        temporary: bool = False,
     ) -> Snapshot:
         with VolLock(volume_id):
             file = img_file(volume_id)
             loop_devs = attached_loops(file.as_posix())
-            snap_path = self._get_snapshot_path(volume_id, name)
+            snap_path = self._get_snapshot_path(volume_id, name, temporary)
             snap_path.parent.mkdir(parents=True, exist_ok=True)
             Path(f"{snap_path}.creating").touch()
             Path(snap_path).unlink(missing_ok=True)
@@ -80,6 +85,7 @@ class SnapshotManager:
                     creation_time=creation_time,
                     snapshot_id=f"{volume_id}/{name}",
                     ready=True,
+                    temporary=temporary,
                 )
             except Exception as e:
                 Path(snap_path).unlink(missing_ok=True)
@@ -92,10 +98,10 @@ class SnapshotManager:
                             raise FsFreezeNotSupportedOnBlockVolumes()
                         fs.unfreeze()
 
-    def delete_snapshot(self, volume_id: str, name: str):
+    def delete_snapshot(self, volume_id: str, name: str, temporary: bool = False):
         """Delete a snapshot"""
         with VolLock(volume_id):
-            snap_path = self._get_snapshot_path(volume_id, name)
+            snap_path = self._get_snapshot_path(volume_id, name, temporary)
             for path in (
                 snap_path,
                 Path(f"{snap_path}.creating"),
@@ -107,16 +113,20 @@ class SnapshotManager:
                 reflink_attached.remove(name)
                 patch_metadata(volume_id, {"reflink_attached": reflink_attached})
 
-    def restore_snapshot(self, volume_id: str, name: str, destination: Path):
+    def restore_snapshot(
+        self, volume_id: str, name: str, destination: Path, temporary: bool = False
+    ):
         """Restore a snapshot"""
         chunk_size = 1024 * 1024
-        snap_path = self._get_snapshot_path(volume_id, name)
+        snap_path = self._get_snapshot_path(volume_id, name, temporary)
         with open(snap_path, "rb") as src, open(destination, "wb") as dst:
             while True:
                 buf = src.read(chunk_size)
                 if not buf:
                     break
                 dst.write(buf)
+            dst.flush()
+            fsync(dst.fileno())
 
     def list_snapshots(
         self,
@@ -125,14 +135,11 @@ class SnapshotManager:
         offset: int | None = None,
         limit: int | None = None,
         ready: bool | None = None,
+        temporary: bool = False,
     ) -> SnapshotList:
         """List available snapshots"""
-        pattern = f"{consts.DATA_DIR}/**/snapshots/*.img"
-        if volume_id:
-            if snapshot_name:
-                pattern = f"{consts.DATA_DIR}/{volume_id}/snapshots/{snapshot_name}.img"
-            else:
-                pattern = f"{consts.DATA_DIR}/{volume_id}/snapshots/*.img"
+        subdir = "snapshots/temp" if temporary else "snapshots"
+        pattern = f"{consts.DATA_DIR}/{volume_id if volume_id else '**'}/{subdir}/{snapshot_name if snapshot_name else '*'}.img"
 
         snapshots = []
         snapshot_files = sorted(glob(pattern, recursive=True))
@@ -155,6 +162,7 @@ class SnapshotManager:
                     size_bytes=snap_file.stat().st_size,
                     creation_time=snap_file.stat().st_ctime,
                     ready=not creating,
+                    temporary=temporary,
                 )
             )
             count += 1

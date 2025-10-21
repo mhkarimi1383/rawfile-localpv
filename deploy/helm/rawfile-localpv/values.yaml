@@ -129,6 +129,9 @@ node:
   # -- Data dir path for provisioner to be used by provisioner
   dataDirPath: /var/csi/rawfile
 
+  # -- Kubelet path (Set to `/var/lib/k0s/kubelet` for k0s)
+  kubeletPath: /var/lib/kubelet
+
   # -- Sets compute resources for node component
   resources:
     {}

@@ -1,10 +1,10 @@
 from pathlib import Path
 from subprocess import CalledProcessError
 
+import consts
 import grpc
 from config import config
 from internal_svc import SIGNATURE_METADATA
-from utils.errors import VolumeCloningNotSupported
 import utils.rawfile
 from consts import (
     FORMAT_OPTIONS_KEY,
@@ -16,7 +16,7 @@ from consts import (
 )
 from internal import internal_pb2, internal_pb2_grpc
 from csi import csi_pb2, csi_pb2_grpc
-from utils.rawfile import be_absent, be_symlink
+from utils.rawfile import be_absent, be_symlink, metadata
 from google.protobuf.wrappers_pb2 import BoolValue
 from orchestrator.k8s import node_ip_mapping, volume_to_node
 from utils.remote import get_capacity
@@ -30,6 +30,7 @@ from utils.rawfile import (
 from utils.devices import mountpoint_to_dev, device_stats
 from utils.units import normalize_parameters, str_to_bool
 from analytics.ga4 import send_event, Usage
+from utils.snapshot_manager import manager as snapshot_manager
 
 NODE_NAME_TOPOLOGY_KEY = "hostname"
 
@@ -170,6 +171,7 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
                 Cap(rpc=Cap.RPC(type=Cap.RPC.EXPAND_VOLUME)),
                 Cap(rpc=Cap.RPC(type=Cap.RPC.CREATE_DELETE_SNAPSHOT)),
                 Cap(rpc=Cap.RPC(type=Cap.RPC.LIST_SNAPSHOTS)),
+                Cap(rpc=Cap.RPC(type=Cap.RPC.CLONE_VOLUME)),
             ]
         )
 
@@ -197,7 +199,15 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
         size = max(MIN_SIZE, request.capacity_range.required_bytes)
         params = normalize_parameters(request.parameters)
         thin_provision = str_to_bool(params.get("thinprovision", "no"))
+        format_options = params.get("formatoptions", "").strip()
+        copy_on_write_param = params.get("copyonwrite", None)
+        copy_on_write = None
+        if copy_on_write_param is not None:
+            copy_on_write = str_to_bool(copy_on_write_param)
+        freezefs = str_to_bool(params.get("freezefs", "no"))
+
         snapshot_id = None
+        remove_source_snapshot = False
         if request.volume_content_source:
             if all(
                 (
@@ -212,8 +222,25 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
                     request.volume_content_source.volume.volume_id,
                 )
             ):
-                # TODO: Create temporary snapshot
-                raise VolumeCloningNotSupported()
+                remove_source_snapshot = True
+                source_meta = metadata(request.volume_content_source.volume.volume_id)
+                current_snapshot = snapshot_manager.list_snapshots(
+                    volume_id=request.volume_content_source.volume.volume_id,
+                    snapshot_name=f"{request.volume_content_source.volume.volume_id}-clone-source",
+                    temporary=True,
+                )
+                if current_snapshot.data and current_snapshot.data[0].ready:
+                    snapshot_id = current_snapshot.data[0].snapshot_id
+                else:
+                    snapshot_id = snapshot_manager.create_snapshot(
+                        volume_id=request.volume_content_source.volume.volume_id,
+                        name=f"{request.name}-clone-source",
+                        temporary=True,
+                        copy_on_write=source_meta.get("copy_on_write", None)
+                        if source_meta.get("copy_on_write", None) is not None
+                        else (consts.COW_SUPPORTED or False),
+                        freeze_fs=source_meta.get("freezefs", False),
+                    ).snapshot_id
         try:
             node_name = request.accessibility_requirements.preferred[0].segments[
                 NODE_NAME_TOPOLOGY_KEY
@@ -227,13 +254,6 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
             context.abort(
                 grpc.StatusCode.INVALID_ARGUMENT, "Topology key not found... why?"
             )
-
-        format_options = params.get("formatoptions", "").strip()
-        copy_on_write_param = params.get("copyonwrite", None)
-        copy_on_write = None
-        if copy_on_write_param is not None:
-            copy_on_write = str_to_bool(copy_on_write_param)
-        freezefs = str_to_bool(params.get("freezefs", "no"))
         try:
             init_rawfile(
                 volume_id=request.name,
@@ -242,6 +262,7 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
                 freezefs=freezefs,
                 copy_on_write=copy_on_write,
                 snapshot_id=snapshot_id,
+                temporary_snapshot=remove_source_snapshot,
             )
         except CalledProcessError as exc:
             if exc.returncode == RESOURCE_EXHAUSTED_EXIT_CODE:
@@ -250,6 +271,12 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
                 )
             else:
                 raise exc
+        finally:
+            if remove_source_snapshot and snapshot_id:
+                vol_id, snap_name = snapshot_id.rsplit("/", 1)
+                snapshot_manager.delete_snapshot(
+                    volume_id=vol_id, name=snap_name, temporary=remove_source_snapshot
+                )
 
         def volume_provision(usage: Usage):
             pvc_name = params.get(CSI_K8S_PVC_NAME_KEY, "")

@@ -73,6 +73,7 @@ Please follow the [install guide](https://github.com/openebs/rawfile-localpv/tre
 | node.image.tag | string | `""` | Overrides default image tag for node component |
 | node.internalGRPC.port | int | `4500` | Port Number used for internal communication gRPC server |
 | node.internalGRPC.workers | int | `10` | gRPC worker count used for internal communication |
+| node.kubeletPath | string | `"/var/lib/kubelet"` | Kubelet path (Set to `/var/lib/k0s/kubelet` for k0s) |
 | node.metrics.enabled | bool | `false` |  |
 | node.priorityClassName | string | `"system-node-critical"` | priorityClassName for node component since this part is critical for node `system-node-critical` is default |
 | node.resources | object | `{}` | Sets compute resources for node component |

@@ -21,15 +21,15 @@ spec:
       volumes:
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry
+            path: {{ include "rawfile-localpv.node-kubelet-path" . }}plugins_registry
             type: Directory
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/rawfile-localpv
+            path: {{ include "rawfile-localpv.node-kubelet-path" . }}plugins/rawfile-localpv
             type: DirectoryOrCreate
         - name: mountpoint-dir
           hostPath:
-            path: /var/lib/kubelet
+            path: {{ include "rawfile-localpv.node-kubelet-path" . }}
             type: DirectoryOrCreate
         - name: data-dir
           hostPath:
@@ -122,7 +122,7 @@ spec:
             - name: socket-dir
               mountPath: /csi
             - name: mountpoint-dir
-              mountPath: /var/lib/kubelet
+              mountPath: {{ include "rawfile-localpv.node-kubelet-path" . }}
               mountPropagation: "Bidirectional"
             - name: data-dir
               mountPath: /data
@@ -141,7 +141,7 @@ spec:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/rawfile-localpv/csi.sock
+              value: {{ include "rawfile-localpv.node-kubelet-path" . }}plugins/rawfile-localpv/csi.sock
           ports:
             - containerPort: 9809
               name: healthz
