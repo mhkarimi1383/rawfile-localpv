@@ -41,6 +41,7 @@ from filesystem.base import UnknownFileSystemError
 from utils.lock import VolLock
 from utils.task_manager import TaskManager
 from utils.snapshot_manager import manager as snapshot_manager
+from utils.volume_manager import manager as volume_manager
 import consts
 
 
@@ -269,10 +270,86 @@ class Bd2FsControllerServicer(csi_pb2_grpc.ControllerServicer):
             request.capacity_range.required_bytes, 10 * 1024 * 1024
         )  # At least 10MB
 
-        # FIXME: update access_type
-        # bd_request.volume_capabilities[0].block = ""
-        # bd_request.volume_capabilities[0].mount = None
-        return self.bds.CreateVolume(request, context)
+        # Extract volume creation parameters
+        volume_id = request.name
+        size = request.capacity_range.required_bytes
+
+        # Extract volume parameters from request (handle None case)
+        params = request.parameters or {}
+        thin_provision = params.get("thin_provision", "false").lower() == "true"
+        freezefs = params.get("freezefs", "false").lower() == "true"
+        copy_on_write_param = params.get("copy_on_write", None)
+        copy_on_write = (
+            copy_on_write_param.lower() == "true" if copy_on_write_param else None
+        )
+        snapshot_id = (
+            request.volume_content_source.snapshot.snapshot_id
+            if request.volume_content_source.HasField("snapshot")
+            else None
+        )
+
+        # Extract node_name for topology (required for CSI compliance)
+        try:
+            node_name = request.accessibility_requirements.preferred[0].segments[
+                "hostname"
+            ]
+        except (IndexError, KeyError):
+            context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT, "Missing topology information"
+            )
+
+        # Helper function to check if volume exists and is ready
+        def _get_current_volume():
+            _volumes = volume_manager.list_volumes(volume_id=volume_id, ready=True)
+            if not _volumes.data:
+                return None
+            return _volumes.data[0]
+
+        # Check if volume already exists and is ready
+        current = _get_current_volume()
+        if not current:
+            # Start background task
+            self._task_manager.run_task(
+                task_manager.TaskName.CREATE_VOLUME,
+                volume_id=volume_id,
+                size=size,
+                thin_provision=thin_provision,
+                freezefs=freezefs,
+                copy_on_write=copy_on_write,
+                snapshot_id=snapshot_id,
+            )
+
+        # Poll for up to 30 seconds (same as CreateSnapshot)
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            current = _get_current_volume()
+            if current and current.ready:
+                # Volume ready - return with ready_to_use=True
+                return csi_pb2.CreateVolumeResponse(
+                    volume=csi_pb2.Volume(
+                        capacity_bytes=current.size_bytes,
+                        volume_id=current.volume_id,
+                        content_source=request.volume_content_source
+                        if snapshot_id
+                        else None,
+                        accessible_topology=[
+                            csi_pb2.Topology(segments={"hostname": node_name})
+                        ],
+                    )
+                )
+            time.sleep(0.5)
+
+        # Timeout - volume still creating in background, return ready_to_use=False
+        return csi_pb2.CreateVolumeResponse(
+            volume=csi_pb2.Volume(
+                capacity_bytes=size,
+                volume_id=volume_id,
+                content_source=request.volume_content_source if snapshot_id else None,
+                accessible_topology=[
+                    csi_pb2.Topology(segments={"hostname": node_name})
+                ],
+            )
+        )
 
     @log_grpc_request
     def DeleteVolume(self, request, context):
