@@ -1,15 +1,4 @@
-import os
-from consts import D_PERMS
-from utils.lock import VolLock
-import time
-from pathlib import Path
-from subprocess import CalledProcessError
-
 import utils.rawfile
-from utils.logs import logger
-from consts import RESOURCE_EXHAUSTED_EXIT_CODE, VOLUME_IN_USE_EXIT_CODE
-from volume_schema import LATEST_SCHEMA_VERSION
-from utils.snapshot_manager import manager as snapshot_manager
 
 
 def get_capacity():
