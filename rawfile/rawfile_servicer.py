@@ -19,7 +19,7 @@ from csi import csi_pb2, csi_pb2_grpc
 from utils.rawfile import be_absent, be_symlink
 from google.protobuf.wrappers_pb2 import BoolValue
 from orchestrator.k8s import node_ip_mapping, volume_to_node
-from utils.remote import get_capacity, init_rawfile, scrub
+from utils.remote import get_capacity
 from utils.logs import log_grpc_request
 from utils.commands import run
 from utils.rawfile import (
@@ -271,9 +271,11 @@ class RawFileControllerServicer(csi_pb2_grpc.ControllerServicer):
 
     @log_grpc_request
     def DeleteVolume(self, request, context):
+        from utils.volume_manager import manager as volume_manager
+
         size = 0
         try:
-            size = scrub(volume_id=request.volume_id)
+            size = volume_manager.delete_volume(volume_id=request.volume_id)
         except CalledProcessError as exc:
             if exc.returncode == VOLUME_IN_USE_EXIT_CODE:
                 context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Volume in use")
